@@ -84,8 +84,8 @@ int get_opts(int argc, char* argv[], int* length, unsigned char** domain);
 int is_valid(unsigned char* in, unsigned int length);
 
 // platform-wrappers
-unsigned int posix_write(int fd, const void* buf, unsigned int n);
-unsigned int posix_read(int fd, void* buf, unsigned int n);
+int posix_write(int fd, const void* buf, unsigned int n);
+int posix_read(int fd, void* buf, unsigned int n);
 int posix_fsync(int fd);
 int posix_isatty(int fd);
 int tty_echo(int fd, int on);
@@ -276,10 +276,10 @@ void osexit(int c, const char* msg) {
 #ifndef _WIN32
 #include <unistd.h>
 #include <termios.h>
-unsigned int posix_write(int fd, const void* buf, unsigned int n) {
+int posix_write(int fd, const void* buf, unsigned int n) {
     return write(fd, buf, n);
 }
-unsigned int posix_read(int fd, void* buf, unsigned int n) {
+int posix_read(int fd, void* buf, unsigned int n) {
     return read(fd, buf, n);
 }
 int posix_fsync(int fd) {
@@ -310,12 +310,15 @@ int tty_echo(int fd, int on) {
 #define WIN32LEAN_AND_MEAN
 #include <windows.h>
 #include <io.h>
-unsigned int posix_write(int fd, const void* buf, unsigned int n) {
+
+int posix_write(int fd, const void* buf, unsigned int n) {
     return _write(fd, buf, n);
 }
-unsigned int posix_read(int fd, void* buf, unsigned int n) {
+
+int posix_read(int fd, void* buf, unsigned int n) {
     return _read(fd, buf, n);
 }
+
 int posix_fsync(int fd) {
 
     HANDLE h = (HANDLE)_get_osfhandle(fd);
