@@ -52,7 +52,7 @@
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
 
-const char USAGE[]  = "csgp -domain=xyz [-length=10]";
+const char USAGE[]  = "csgp -domain=xyz [-length=10] [-nolock]";
 const char PROMPT[] = "password: ";
 
 // special base64-table to replace
@@ -80,7 +80,7 @@ struct SGP;
 int supergenpass(struct SGP*);
 void osexit(int code, const char* msg);
 int read_pw(int fd, unsigned char* pw, int max_length);
-int get_opts(int argc, char* argv[], int* length, unsigned char** domain);
+int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* lock);
 int is_valid(unsigned char* in, unsigned int length);
 
 // platform-wrappers
@@ -89,6 +89,8 @@ int posix_read(int fd, void* buf, unsigned int n);
 int posix_fsync(int fd);
 int posix_isatty(int fd);
 int tty_echo(int fd, int on);
+int lock_memory(void* addr, unsigned int size);
+int unlock_memory(void* addr, unsigned int size);
 
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
@@ -108,19 +110,36 @@ struct SGP {
 int main(int argc, char* argv[]) {
 
     struct SGP sgp;
-    sgp.domain = 0;
+    unsigned char* domain = 0;
+    int domain_len = 0;
+    int lock = 1;
+
     sgp.out_len = DEFAULT_PW_LENGTH;
 
-    get_opts(argc, argv, &sgp.out_len, &sgp.domain);
+    get_opts(argc, argv, &sgp.out_len, &domain, &lock);
 
-    if (!sgp.domain) {
+    if (!domain) {
         osexit(1, "error: missing argument -domain");
     }
+
+    domain_len = str_len(domain);
+
+    if (lock) {
+        if (lock_memory(domain, domain_len) != 0) {
+            osexit(4, "error: can't lock memory");
+        }
+        if (lock_memory(&sgp, sizeof(sgp)) != 0) {
+            osexit(4, "error: can't lock memory");
+        }
+    }
+
     if ((sgp.out_len < MIN_PW_LENGTH) || (sgp.out_len > B64_MD5_DIGEST_LENGTH)) {
         osexit(1, "error: given -length must be >= 4 and <= 24");
     }
 
-    sgp.domain_len = str_len(sgp.domain);
+    sgp.domain = domain;
+    sgp.domain_len = domain_len;
+
     sgp.in_len = read_pw(0, sgp.pw, sizeof(sgp.pw));
 
     supergenpass(&sgp);
@@ -130,8 +149,13 @@ int main(int argc, char* argv[]) {
     posix_write(1, "\n", 1);
     posix_fsync(1);
 
-    byte_zero(sgp.domain, sgp.domain_len);
+    byte_zero(domain, domain_len);
     byte_zero(&sgp, sizeof(sgp));
+
+    if (lock) {
+        unlock_memory(&sgp, sizeof(sgp));
+        unlock_memory(domain, domain_len);
+    }
 
     return 0;
 }
@@ -175,18 +199,20 @@ int supergenpass(struct SGP* sgp) {
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
 
-int get_opts(int argc, char* argv[], int* length, unsigned char** domain) {
+int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* lock) {
 
     const char opt_help[]   = "-h";
     const char opt_length[] = "-length=";
     const char opt_domain[] = "-domain=";
+    const char opt_nolock[] = "-nolock";
 
     int i;
     for (i = 1; i < argc; i++) {
         if (str_diffn(argv[i], opt_help, sizeof(opt_help)-1) == 0) {
             osexit(0, USAGE);
-        }
-        else if (str_diffn(argv[i], opt_length, sizeof(opt_length)-1) == 0) {
+        } else if (str_diffn(argv[i], opt_nolock, sizeof(opt_nolock)-1) == 0) {
+            *lock = 0;
+        } else if (str_diffn(argv[i], opt_length, sizeof(opt_length)-1) == 0) {
             unsigned long l = 0;
             if (str_len(argv[i]) <= sizeof(opt_length)-1) {
                 osexit(1, "error: missing argument for -length");
@@ -209,9 +235,8 @@ int read_pw(int fd, unsigned char* pw, int max_length) {
 
     int n;
 
-
     if (posix_isatty(fd)) {
-        posix_write(1, PROMPT, sizeof(PROMPT));
+        posix_write(1, PROMPT, sizeof(PROMPT)-1);
         posix_fsync(1);
         tty_echo(fd, 0);
     }
@@ -305,6 +330,14 @@ int tty_echo(int fd, int on) {
     return 1;
 }
 
+int lock_memory(void* addr, unsigned int size) {
+    return mlock(addr, size);
+}
+
+int unlock_memory(void* addr, unsigned int size) {
+    return munlock(addr, size);
+}
+
 #else
 
 #define WIN32LEAN_AND_MEAN
@@ -327,6 +360,7 @@ int posix_fsync(int fd) {
     }
     return 0;
 }
+
 int posix_isatty(int fd) {
     return _isatty(fd);
 }
@@ -343,6 +377,14 @@ int tty_echo(int fd, int on) {
     }
     SetConsoleMode(h, mode);
     return 0;
+}
+
+int lock_memory(void* addr, unsigned int size) {
+    return !VirtualLock(addr, size);
+}
+
+int unlock_memory(void* addr, unsigned int size) {
+    return !VirtualUnlock(addr, size);
 }
 
 #endif
