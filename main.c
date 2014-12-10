@@ -330,6 +330,9 @@ int tty_echo(int fd, int on) {
     return 1;
 }
 
+#ifndef mlock // FreeBSD/MacOSX
+#include <sys/mman.h>
+#endif
 int lock_memory(void* addr, unsigned int size) {
     return mlock(addr, size);
 }
