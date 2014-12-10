@@ -30,9 +30,25 @@
 
    - the initial password is stored only once in the working
      buffer. it get's overwritten in the first round already.
-   - for the whole process we allocate only 16+24 bytes:
-     16: bytes needed for md5_final()
-     24: bytes needed for base64_encode(16 bytes)
+   - for the whole process we allocate only 24 bytes: the amount
+     of ram needed to base64_encode(16 bytes)
+   - the 16 bytes for the digest are stored inside the 24 byte buffer
+     (like this: [24......[16..............]] ). this works because
+     * the master-passwords ends directly as a md5-state in the first round
+     * the md5-state is copied over into the 16byte block
+     * the 16byte block gets base64-encoded. the b64-encoder chases the
+       currently processed byte from the 16byte block but never catches
+       up; except for the last round. in that round, any trace of the raw
+       md5-state got erased by the base64-version of it:
+
+           +--------+
+       [aaaa.......[111.........]]
+       [aaaabbbb...[111222......]]
+       [aaaabbbbccc[c11222333...]]
+
+     * the 24byte buffer is then transformed into a md5-state and
+       the whole process repeats.
+
    - in addition we need one md5Context and bytes for the
      domain which we get by argv[]
    - all sensitive informatio gets overwritten as soon
@@ -70,7 +86,6 @@ enum {
     DEFAULT_PW_LENGTH     = 10,
     MAX_ROUNDS            = 10,
     B64_MD5_DIGEST_LENGTH = 24, // base_encded_len(MD5_DIGEST_LENGTH)
-    PW_BUF_SIZE           = B64_MD5_DIGEST_LENGTH + MD5_DIGEST_LENGTH
 };
 
 
@@ -90,7 +105,7 @@ int is_valid(const unsigned char* pw, unsigned int length);
 struct SGP {
     int             in_len;   // length of input password
     int             out_len;  // length of generated password
-    unsigned char   pw[PW_BUF_SIZE]; // see NOTES above
+    unsigned char   pw[B64_MD5_DIGEST_LENGTH]; // see 'notes' above
     md5Context      md5;
     unsigned char*  domain;
     int             domain_len;
@@ -157,7 +172,7 @@ int supergenpass(struct SGP* sgp) {
 
     md5Context* ctx = &sgp->md5;
     unsigned char* pw = &(sgp->pw[0]);
-    unsigned char* raw = &(sgp->pw[B64_MD5_DIGEST_LENGTH]);
+    unsigned char* raw = &(sgp->pw[B64_MD5_DIGEST_LENGTH-MD5_DIGEST_LENGTH]);
     int round;
     md5_init(ctx);
 
