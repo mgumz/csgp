@@ -42,6 +42,7 @@
 
 #include "md5.h"
 #include "base64.h"
+#include "platform.h"
 
 #include "djb/str.h"
 #include "djb/scan.h"
@@ -82,15 +83,6 @@ void osexit(int code, const char* msg);
 int read_pw(int fd, unsigned char* pw, int max_length);
 int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* lock);
 int is_valid(const unsigned char* pw, unsigned int length);
-
-// platform-wrappers
-int posix_write(int fd, const void* buf, unsigned int n);
-int posix_read(int fd, void* buf, unsigned int n);
-int posix_fsync(int fd);
-int posix_isatty(int fd);
-int tty_echo(int fd, int on);
-int lock_memory(void* addr, unsigned int size);
-int unlock_memory(void* addr, unsigned int size);
 
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
@@ -298,96 +290,3 @@ void osexit(int c, const char* msg) {
     exit(c);
 }
 
-#ifndef _WIN32
-#include <unistd.h>
-#include <termios.h>
-int posix_write(int fd, const void* buf, unsigned int n) {
-    return write(fd, buf, n);
-}
-int posix_read(int fd, void* buf, unsigned int n) {
-    return read(fd, buf, n);
-}
-int posix_fsync(int fd) {
-    return fsync(fd);
-}
-int posix_isatty(int fd) {
-    return isatty(fd);
-}
-
-int tty_echo(int fd, int on) {
-
-    struct termios tty;
-    tcgetattr(fd, &tty);
-    if (!on) {
-        tty.c_lflag &= ~ECHO;
-    } else {
-        tty.c_lflag |= ECHO;
-    }
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        osexit(3, "error: disable echo failed");
-    }
-    return 1;
-}
-
-#ifndef mlock // FreeBSD/MacOSX
-#include <sys/mman.h>
-#endif
-int lock_memory(void* addr, unsigned int size) {
-    return mlock(addr, size);
-}
-
-int unlock_memory(void* addr, unsigned int size) {
-    return munlock(addr, size);
-}
-
-#else
-
-#define WIN32LEAN_AND_MEAN
-#include <windows.h>
-#include <io.h>
-
-int posix_write(int fd, const void* buf, unsigned int n) {
-    return _write(fd, buf, n);
-}
-
-int posix_read(int fd, void* buf, unsigned int n) {
-    return _read(fd, buf, n);
-}
-
-int posix_fsync(int fd) {
-
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-    if (!FlushFileBuffers(h)) {
-        return -1;
-    }
-    return 0;
-}
-
-int posix_isatty(int fd) {
-    return _isatty(fd);
-}
-
-int tty_echo(int fd, int on) {
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-    DWORD mode;
-    GetConsoleMode(h, &mode);
-    if (!on) {
-        mode &= ~ENABLE_ECHO_INPUT;
-    }
-    else {
-        mode |= ENABLE_ECHO_INPUT;
-    }
-    SetConsoleMode(h, mode);
-    return 0;
-}
-
-int lock_memory(void* addr, unsigned int size) {
-    return !VirtualLock(addr, size);
-}
-
-int unlock_memory(void* addr, unsigned int size) {
-    return !VirtualUnlock(addr, size);
-}
-
-#endif
