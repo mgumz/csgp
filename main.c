@@ -81,7 +81,7 @@ int supergenpass(struct SGP*);
 void osexit(int code, const char* msg);
 int read_pw(int fd, unsigned char* pw, int max_length);
 int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* lock);
-int is_valid(unsigned char* in, unsigned int length);
+int is_valid(const unsigned char* pw, unsigned int length);
 
 // platform-wrappers
 int posix_write(int fd, const void* buf, unsigned int n);
@@ -265,21 +265,21 @@ int read_pw(int fd, unsigned char* pw, int max_length) {
     return n;
 }
 
-// checks the first 'length' bytes of 'in' if they
+// checks the first 'length' bytes of 'pw' if they
 // are valid under the rules of supergenpass.com:
 //
 // 1. first char is a lowercase letter [a-z]
 // 2. there is at least one uppercase letter [A-Z]
 // 3. there is at least one digit [0-9]
-int is_valid(unsigned char* in, unsigned int length) {
+int is_valid(const unsigned char* pw, unsigned int length) {
     unsigned int mask = 0;
-    if (!(*in >= 'a' && *in <= 'z')) {
+    if (!(*pw >= 'a' && *pw <= 'z')) {
         return 0;
     }
-    for (; length > 0; in++, length--) {
-        if ((*in >= 'A') && (*in <= 'Z')) {
+    for (; length > 0; pw++, length--) {
+        if ((*pw >= 'A') && (*pw <= 'Z')) {
             mask |= 1;
-        } else if ((*in >= '0') && (*in <= '9')) {
+        } else if ((*pw >= '0') && (*pw <= '9')) {
             mask |= 2;
         }
         if (mask == 3) {
