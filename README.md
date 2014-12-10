@@ -85,7 +85,7 @@ or a one-liner:
 
 or (using [dietlibc][3] to create a 15k static binary on linux):
 
-    $> diet -Os -o csgp main.c md5.c base64.c platform_unix.c \
+    $> diet -Os gcc -o csgp main.c md5.c base64.c platform_unix.c \
         djb/*.c
 
 ### windows:
