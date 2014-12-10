@@ -184,7 +184,10 @@ int supergenpass(struct SGP* sgp) {
         base64_encode(pw, raw, MD5_DIGEST_LENGTH, B64_SGP_TABLE);
     }
 
-    // md5_final() sets all elements of ctx to 0
+    // cleanup: md5_final() sets all elements of ctx to 0.
+    // the user is interested only in the first sgp->out_len bytes
+    // of sgp->pw anyway: 0 the rest.
+    byte_zero(pw + sgp->out_len, sizeof(sgp->pw) - sgp->out_len);
     return 1;
 }
 
