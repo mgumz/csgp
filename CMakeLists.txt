@@ -8,10 +8,10 @@ set(csgp_src main.c
     djb/scan_ulong.c
 )
 
-if (!MSVC)
+if (NOT MSVC)
     set (csgp_src ${csgp_src} platform_unix.c)
-else()
+else(NOT MSVC)
     set (csgp_src ${csgp_src} platform_msvc.c)
-endif(!MSVC)
+endif(NOT MSVC)
 
 add_executable(csgp ${csgp_src})
