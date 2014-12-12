@@ -1,7 +1,7 @@
 project(csgp)
 
 set(csgp_src main.c
-    base64.c md5.c
+    base64.c md5.c platform.c
     djb/byte_copy.c djb/byte_zero.c
     djb/error.c
     djb/str_diffn.c djb/str_len.c

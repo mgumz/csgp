@@ -64,8 +64,6 @@
 #include "djb/scan.h"
 #include "djb/byte.h"
 
-#include <stdlib.h>
-
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
 
@@ -297,14 +295,5 @@ int is_valid(const unsigned char* pw, unsigned int length) {
         }
     }
     return 0;
-}
-
-
-void osexit(int c, const char* msg) {
-    if (msg) {
-        posix_write(2, msg, str_len(msg));
-        posix_write(2, "\n", 1);
-    }
-    exit(c);
 }
 

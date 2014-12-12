@@ -11,6 +11,8 @@
 
 \*------------------------------------------------------------------*/
 
+extern void osexit(int code, const char* msg);
+
 extern int posix_write(int fd, const void* buf, unsigned int n);
 extern int posix_read(int fd, void* buf, unsigned int n);
 extern int posix_fsync(int fd);
