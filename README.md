@@ -80,12 +80,14 @@ simple an plain cmake:
 
 or a one-liner:
 
-    $> gcc -Os -o csgp main.c md5.c base64.c platform_unix.c \
+    $> gcc -Os -o csgp main.c md5.c base64.c \
+        platform.c platform_unix.c \
         djb/*.c
 
 or (using [dietlibc][3] to create a 15k static binary on linux):
 
-    $> diet -Os gcc -o csgp main.c md5.c base64.c platform_unix.c \
+    $> diet -Os gcc -o csgp main.c md5.c base64.c \
+        platform.c platform_unix.c \
         djb/*.c
 
 ### windows:
