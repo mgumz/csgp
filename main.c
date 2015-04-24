@@ -244,8 +244,8 @@ int read_pw(int fd, unsigned char* pw, int max_length) {
     int n;
 
     if (posix_isatty(fd)) {
-        posix_write(1, PROMPT, sizeof(PROMPT)-1);
-        posix_fsync(1);
+        posix_write(2, PROMPT, sizeof(PROMPT)-1);
+        posix_fsync(2);
         tty_echo(fd, 0);
     }
 
