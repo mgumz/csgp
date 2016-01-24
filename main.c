@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     get_opts(argc, argv, &sgp.out_len, &domain, &lock);
 
     if (!domain) {
-        osexit(1, "error: missing argument -domain");
+        osexit(1, "usage: csgp -domain=\"example.com\"");
     }
 
     domain_len = str_len(domain);
