@@ -73,7 +73,11 @@ other should work too, the code should be pretty portable.
 
 ### unix
 
-simple an plain cmake:
+simple and plain make:
+
+    $> make
+
+simple and plain cmake:
 
     $> ( mkdir build && cd build && cmake .. )
     $> make -C build
