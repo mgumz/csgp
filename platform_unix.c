@@ -13,10 +13,10 @@
 #include <sys/mman.h> // mlock() etc; FreeBSD/MacOSX needs it
 #include <termios.h>
 
-int posix_write(int fd, const void* buf, unsigned int n) {
+int posix_write(int fd, const void* buf, size_t n) {
     return write(fd, buf, n);
 }
-int posix_read(int fd, void* buf, unsigned int n) {
+int posix_read(int fd, void* buf, size_t n) {
     return read(fd, buf, n);
 }
 int posix_fsync(int fd) {
@@ -42,11 +42,11 @@ int tty_echo(int fd, int on) {
     return 1;
 }
 
-int lock_memory(void* addr, unsigned int size) {
-    return mlock(addr, size);
+int lock_memory(void* addr, size_t size) {
+    return mlock(addr, (unsigned int)size);
 }
 
-int unlock_memory(void* addr, unsigned int size) {
-    return munlock(addr, size);
+int unlock_memory(void* addr, size_t size) {
+    return munlock(addr, (unsigned int)size);
 }
 

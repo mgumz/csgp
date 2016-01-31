@@ -1,5 +1,9 @@
 # csgp - a supergenpass.com implementation in c
 
+<a href="https://scan.coverity.com/projects/mgumz-csgp">
+  <img alt="Coverity Scan Build Status" src="https://scan.coverity.com/projects/7723/badge.svg"/>
+</a>
+
 *csgp* is a command line tool to create domain-specific passwords based
 upon one master password. the algorithm used is the same as [supergenpass][1].
 

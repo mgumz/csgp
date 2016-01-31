@@ -8,16 +8,17 @@
 \*------------------------------------------------------------------*/
 
 #include "platform.h"
+#include <stdint.h>
 
 #define WIN32LEAN_AND_MEAN
 #include <windows.h>
 #include <io.h>
 
-int posix_write(int fd, const void* buf, unsigned int n) {
+int posix_write(int fd, const void* buf, size_t n) {
     return _write(fd, buf, n);
 }
 
-int posix_read(int fd, void* buf, unsigned int n) {
+int posix_read(int fd, void* buf, size_t n) {
     return _read(fd, buf, n);
 }
 

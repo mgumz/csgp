@@ -59,7 +59,7 @@ void md5_init(md5Context* ctx) {
    Update context to reflect the concatenation of another buffer
    full of bytes.
 \*------------------------------------------------------------------*/
-void md5_update(md5Context* ctx, const unsigned char input[], unsigned int len) {
+void md5_update(md5Context* ctx, const unsigned char input[], size_t len) {
 
     unsigned int have, need;
 
@@ -124,7 +124,7 @@ void md5_final(unsigned char digest[MD5_DIGEST_LENGTH], md5Context *ctx) {
         for (i = 0; i < 4; i++) {
             PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
         }
-        byte_zero(ctx, sizeof(*ctx));
+        byte_zero((char*)ctx, sizeof(*ctx));
     }
 }
 

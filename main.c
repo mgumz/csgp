@@ -74,7 +74,7 @@ const char PROMPT[] = "password: ";
 // '+' -> 9
 // '/' -> 8
 // '=' => A (the padding sign)
-const unsigned char B64_SGP_TABLE[65] =
+const unsigned char B64_SGP_TABLE[BASE64_LUT_LEN] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "012345678998A";
@@ -92,21 +92,20 @@ enum {
 
 struct SGP;
 int supergenpass(struct SGP*);
-void osexit(int code, const char* msg);
-int read_pw(int fd, unsigned char* pw, int max_length);
-int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* lock);
-int is_valid(const unsigned char* pw, unsigned int length);
+int read_pw(int fd, unsigned char* pw, size_t max_len);
+int get_opts(int argc, char* argv[], size_t* len, unsigned char** domain, int* lock);
+int is_valid(const unsigned char* pw, size_t len);
 
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
 
 struct SGP {
-    int             in_len;   // length of input password
-    int             out_len;  // length of generated password
+    size_t          in_len;   // length of input password
+    size_t          out_len;  // length of generated password
     unsigned char   pw[B64_MD5_DIGEST_LENGTH]; // see 'notes' above
     md5Context      md5;
     unsigned char*  domain;
-    int             domain_len;
+    size_t          domain_len;
 };
 
 /*------------------------------------------------------------------*\
@@ -124,22 +123,22 @@ int main(int argc, char* argv[]) {
     get_opts(argc, argv, &sgp.out_len, &domain, &lock);
 
     if (!domain) {
-        osexit(1, "usage: csgp -domain=\"example.com\"");
+        return osexit(1, "usage: csgp -domain=\"example.com\"");
     }
 
     domain_len = str_len(domain);
 
     if (lock) {
         if (lock_memory(domain, domain_len) != 0) {
-            osexit(4, "error: can't lock memory");
+            return osexit(4, "error: can't lock memory");
         }
         if (lock_memory(&sgp, sizeof(sgp)) != 0) {
-            osexit(4, "error: can't lock memory");
+            return osexit(4, "error: can't lock memory");
         }
     }
 
     if ((sgp.out_len < MIN_PW_LENGTH) || (sgp.out_len > B64_MD5_DIGEST_LENGTH)) {
-        osexit(1, "error: given -length must be >= 4 and <= 24");
+        return osexit(1, "error: given -length must be >= 4 and <= 24");
     }
 
     sgp.domain = domain;
@@ -168,7 +167,7 @@ int main(int argc, char* argv[]) {
 
 int supergenpass(struct SGP* sgp) {
 
-    md5Context* ctx = &sgp->md5;
+    md5Context* ctx = &(sgp->md5);
     unsigned char* pw = &(sgp->pw[0]);
     unsigned char* raw = &(sgp->pw[B64_MD5_DIGEST_LENGTH-MD5_DIGEST_LENGTH]);
     int round;
@@ -207,7 +206,7 @@ int supergenpass(struct SGP* sgp) {
 /*------------------------------------------------------------------*\
 \*------------------------------------------------------------------*/
 
-int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* lock) {
+int get_opts(int argc, char* argv[], size_t* len, unsigned char** domain, int* lock) {
 
     const char opt_help[]   = "-h";
     const char opt_length[] = "-length=";
@@ -217,21 +216,21 @@ int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* l
     int i;
     for (i = 1; i < argc; i++) {
         if (str_diffn(argv[i], opt_help, sizeof(opt_help)-1) == 0) {
-            osexit(0, USAGE);
+            return osexit(0, USAGE);
         } else if (str_diffn(argv[i], opt_nolock, sizeof(opt_nolock)-1) == 0) {
             *lock = 0;
         } else if (str_diffn(argv[i], opt_length, sizeof(opt_length)-1) == 0) {
             unsigned long l = 0;
             if (str_len(argv[i]) <= sizeof(opt_length)-1) {
-                osexit(1, "error: missing argument for -length");
+                return osexit(1, "error: missing argument for -length");
             }
             if (scan_ulong(&argv[i][sizeof(opt_length)-1], &l) == 0) {
-                osexit(1, "error: can't parse given -length");
+                return osexit(1, "error: can't parse given -length");
             }
-            *length = (int)l;
+            *len = (size_t)l;
         } else if (str_diffn(argv[i], opt_domain, sizeof(opt_domain)-1) == 0) {
             if (str_len(argv[i]) <= sizeof(opt_domain)-1) {
-                osexit(1, "error: missing argument for -domain");
+                return osexit(1, "error: missing argument for -domain");
             }
             *domain = (unsigned char*)&argv[i][sizeof(opt_domain)-1];
         }
@@ -239,7 +238,7 @@ int get_opts(int argc, char* argv[], int* length, unsigned char** domain, int* l
     return 0;
 }
 
-int read_pw(int fd, unsigned char* pw, int max_length) {
+int read_pw(int fd, unsigned char* pw, size_t max_len) {
 
     int n;
 
@@ -249,14 +248,14 @@ int read_pw(int fd, unsigned char* pw, int max_length) {
         tty_echo(fd, 0);
     }
 
-    n = (int)posix_read(fd, pw, max_length);
+    n = (int)posix_read(fd, pw, max_len);
 
     if (posix_isatty(fd)) {
         tty_echo(fd, 1);
     }
 
     if (n == -1) {
-        osexit(2, "error: reading pw");
+        return osexit(2, "error: reading pw");
     }
 
     // scan backward for lf/cr aka 'the enter'
@@ -267,7 +266,7 @@ int read_pw(int fd, unsigned char* pw, int max_length) {
     }
 
     if (n == 0) {
-        osexit(2, "error: pw empty");
+        return osexit(2, "error: pw empty");
     }
 
     return n;
@@ -279,12 +278,12 @@ int read_pw(int fd, unsigned char* pw, int max_length) {
 // 1. first char is a lowercase letter [a-z]
 // 2. there is at least one uppercase letter [A-Z]
 // 3. there is at least one digit [0-9]
-int is_valid(const unsigned char* pw, unsigned int length) {
+int is_valid(const unsigned char* pw, size_t len) {
     unsigned int mask = 0;
     if (!(*pw >= 'a' && *pw <= 'z')) {
         return 0;
     }
-    for (; length > 0; pw++, length--) {
+    for (; len > 0; pw++, len--) {
         if ((*pw >= 'A') && (*pw <= 'Z')) {
             mask |= 1;
         } else if ((*pw >= '0') && (*pw <= '9')) {
