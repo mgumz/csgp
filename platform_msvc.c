@@ -35,6 +35,11 @@ int posix_isatty(int fd) {
     return _isatty(fd);
 }
 
+int discard_fd(int fd) {
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    return (int)FlushConsoleInputBuffer(h);
+}
+
 int tty_echo(int fd, int on) {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
     DWORD mode;

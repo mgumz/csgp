@@ -26,6 +26,10 @@ int posix_isatty(int fd) {
     return isatty(fd);
 }
 
+int discard_fd(int fd) {
+    return tcflush(fd, TCIOFLUSH);
+}
+
 int tty_echo(int fd, int on) {
 
     struct termios tty;

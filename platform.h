@@ -21,6 +21,7 @@ extern int posix_fsync(int fd);
 extern int posix_isatty(int fd);
 
 extern int tty_echo(int fd, int on);
+extern int discard_fd(int fd);
 
 extern int lock_memory(void* addr, size_t size);
 extern int unlock_memory(void* addr, size_t size);

@@ -30,8 +30,10 @@
 
    - the initial password is stored only once in the working
      buffer. it get's overwritten in the first round already.
-   - for the whole process we allocate only 24 bytes: the amount
-     of ram needed to base64_encode(16 bytes)
+   - for the whole process we allocate only 25 bytes: the amount
+     of ram needed to base64_encode(16 bytes) == 24 bytes PLUS
+     1 extra byte to detect, if the given master password is too
+     long (see read_pw()).
    - the 16 bytes for the digest are stored inside the 24 byte buffer
      (like this: [24......[16..............]] ). this works because
      * the master-passwords ends directly as a md5-state in the first round
@@ -102,7 +104,7 @@ int is_valid(const unsigned char* pw, size_t len);
 struct SGP {
     size_t          in_len;   // length of input password
     size_t          out_len;  // length of generated password
-    unsigned char   pw[B64_MD5_DIGEST_LENGTH]; // see 'notes' above
+    unsigned char   pw[B64_MD5_DIGEST_LENGTH+1]; // see 'notes' above
     md5Context      md5;
     unsigned char*  domain;
     size_t          domain_len;
@@ -271,6 +273,25 @@ int read_pw(int fd, unsigned char* pw, size_t max_len) {
 
     if (n == 0) {
         return osexit(2, "error: pw empty");
+    }
+
+    // the given buffer is essentially one byte larger
+    // than the maximum allowed passphrase length.
+    // if we were able to read max_len bytes, the
+    // passphrase exceeds the maximum passphrase length.
+    // a) due to the limit of the design of csgp we won't
+    //    be able to handle more bytes
+    // b) we don't want to write the superflouse bytes to
+    //    stdout where they would become part of the next
+    //    command and thus leak information.
+    // thus, we flush stdin, zero the already read password
+    // and exit with an error
+    if (n == max_len) {
+        if (posix_isatty(fd)) {
+            discard_fd(1);
+        }
+        byte_zero(pw, max_len);
+        return osexit(2, "the passphrase is longer than 24 bytes.");
     }
 
     return n;
