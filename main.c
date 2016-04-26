@@ -51,7 +51,7 @@
 
    - in addition we need one md5Context and bytes for the
      domain which we get by argv[]
-   - all sensitive informatio gets overwritten as soon
+   - all sensitive information gets overwritten as soon
      as it is not needed anymore
 
 \*------------------------------------------------------------------*/
