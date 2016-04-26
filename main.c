@@ -148,9 +148,13 @@ int main(int argc, char* argv[]) {
 
     supergenpass(&sgp);
 
-    posix_write(1, "\n", 1);
-    posix_write(1, sgp.pw, sgp.out_len);
-    posix_write(1, "\n", 1);
+    if (posix_isatty(1)) {
+        posix_write(1, "\n", 1);
+        posix_write(1, sgp.pw, sgp.out_len);
+        posix_write(1, "\n", 1);
+    } else {
+        posix_write(1, sgp.pw, sgp.out_len);
+    }
     posix_fsync(1);
 
     byte_zero(domain, domain_len);
