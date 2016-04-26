@@ -56,6 +56,9 @@
 
 \*------------------------------------------------------------------*/
 
+#include <stdio.h>
+#include <string.h>
+
 #include "md5.h"
 #include "base64.h"
 #include "platform.h"
@@ -268,6 +271,22 @@ int read_pw(int fd, unsigned char* pw, size_t max_len) {
     if (n == 0) {
         return osexit(2, "error: pw empty");
     }
+
+    // We only allocate 24 bytes memory.
+    if (n >= 24) {
+        // Clean up master password from memory.
+        memset(pw, 0, n);
+        // Flush stdin.
+        // `fflush(inputStream)` is undefined by standards. Does not use it.
+        char to_flushed[1]; // C89
+        for (;
+            to_flushed[0] != '\n' && to_flushed[0] != '\r' && to_flushed[0] != EOF;
+            posix_read(fd, &to_flushed, 1));
+        // The master password must be shorter than 22
+        // (one byte for `enter` and one byte for null).
+        return osexit(1, "error: master password must be < 22 bytes");
+    }
+
 
     return n;
 }
