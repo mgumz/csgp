@@ -117,6 +117,15 @@ or open the the created .sln file in visualstudio. or use nmake:
     $> cmake.exe -G "NMake Makefiles"
     $> nmake
 
+or like ... a one liner (powershell):
+
+    $> mkdir build-quick
+    $> cd build-quick
+    $> cl /Fecsgp.exe /guard:cf -GL -FC -MT -DSFML_STATIC `
+        ../main.c ../md5.c ../base64.c `
+        ../platform.c ../platform_msvc.c `
+        ../djb/*.c
+
 
 [1]: http://supergenpass.com/
 [2]: https://chriszarate.github.io/supergenpass/mobile/
