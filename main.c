@@ -288,7 +288,7 @@ int read_pw(int fd, unsigned char* pw, size_t max_len) {
     // and exit with an error
     if (n == max_len) {
         if (posix_isatty(fd)) {
-            discard_fd(1);
+            discard_fd(fd);
         }
         byte_zero(pw, max_len);
         return osexit(2, "the passphrase is longer than 24 bytes.");
